@@ -1,4 +1,4 @@
-import json, os, pickle
+import json, os, pickle, re
 
 DB_FILE = "./.data"
 ROW_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
@@ -38,9 +38,13 @@ class Main:
         else:
             rows = self.init_data()
             self.data = Data(rows)
+
+        self.expression = re.compile("^(BOOK|CANCEL)\s([A-T][0-7])\s([0-7])")
     
     def init_data(self):
-        rows = [Row(row_letter, [Seat(index) for index in range(8)]) for row_letter in ROW_LETTERS]
+        rows = {}
+        for row_letter in ROW_LETTERS:
+            rows[row_letter] = Row(row_letter, [Seat(index) for index in range(8)])
         return rows
 
     def save_data(self):
@@ -50,9 +54,27 @@ class Main:
     def read_data(self):
         with open(DB_FILE, 'rb') as f:
             return pickle.load(f)
-         
+
+    def modify_seat(self, command):
+        match = self.expression.match(command)
+        if match:
+            #Command matches expected format
+            operation, start, count = match.group(1, 2, 3)
+
+            if operation == 'BOOK':
+                pass
+            else:
+                pass
+    
 if __name__ == "__main__":
     m = Main()
-    m.data.rows[0].seats[0].booked = True
+    # print(m.expression.match("BOOK A0 7"))
+    # print(m.expression.match("CANCEL A2 7"))
+    # print(m.expression.match("BOOK A0 8"))
+    # print(m.expression.match("CANCEL A20 7"))
+    # print(m.expression.match("BOOK Z0 7"))
+    # print(m.expression.match("CANCEL U2 7"))
+    # print(m.expression.match("REMOVE A2 7"))
+    m.data.rows['A'].seats[0].booked = True
     m.save_data()
-    print(len(m.data.rows[0].seats))
+    print(len(m.data.rows['A'].seats))
