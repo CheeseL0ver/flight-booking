@@ -1,12 +1,14 @@
-import os, pickle, re
+#!/usr/bin/env python
+import os, pickle, re, argparse, sys
 from typing import List, Dict
 
+# "CONSTANTS"
 DB_FILE = "./.data"
 ROW_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 
 class Seat:
     """Dataclass for plane seat representation"""
-    def __init__(self, number, booked=False):
+    def __init__(self, number: int, booked=False):
         """
         Class constructor
         :param number: Number representation for the seat
@@ -50,10 +52,17 @@ class Data:
         self.rows: Dict[str, Row] = rows
 
 class Main:
-    def __init__(self):
-        """Class constructor"""
+    def __init__(self, args):
+        """
+        Class constructor
+        
+        :param args: Namespace ofCLI arguments
+        """
+
+        # Regex performs most of the "heavy lifting" for input verification
         self.expression = re.compile("^(BOOK|CANCEL)\s([A-T])([0-7])\s([1-7])$")
         self.data: Data = None
+        self.verbose = args.verbose
         
         # Load/initialize data
         if os.path.exists(DB_FILE):
@@ -78,6 +87,8 @@ class Main:
         """
         Write 'Data' object to file
         """
+        if self.verbose:
+            print('Saving data to file...')
         with open(DB_FILE, 'wb') as f:
             pickle.dump(self.data, f)
 
@@ -87,6 +98,8 @@ class Main:
 
         :return Data: Class representation of file data
         """
+        if self.verbose:
+            print('Reading data from file...')
         with open(DB_FILE, 'rb') as f:
             return pickle.load(f)
 
@@ -116,8 +129,12 @@ class Main:
                 seats = self.data.rows[row].seats.copy()
                 for index in range(start, stop):
                     if seats[index].booked:
+                        if self.verbose:
+                            print(f'Failed to book seat(s) using command: "{command}"')
                         return False
                     else:
+                        if self.verbose:
+                            print(f'Booked seat "{index}" in row "{row}" using command: "{command}"')
                         seats[index].booked = True
 
                 # Update the row contents
@@ -128,40 +145,65 @@ class Main:
                 seats = self.data.rows[row].seats.copy()
                 for index in range(start, stop):    
                     if not seats[index].booked:
+                        if self.verbose:
+                            print(f'Failed to cancel seat(s) using command: "{command}"')
                         return False
                     else:
+                        if self.verbose:
+                            print(f'Cancelled booking for seat "{index}" in row "{row}" using command: "{command}"')
                         seats[index].booked = False
 
                 # Update the row contents
                 self.data.rows[row].seats = seats
+                if self.verbose:
+                            print('Updated instance booking data')
                 return True
     
         else:
             #Input was invalid
+            if self.verbose:
+                print(f'Failed to operate. Invalid command: "{command}"')
             return False
-        
+
+class CustomParser(argparse.ArgumentParser):
+    """Custom parser class to prevent error output"""
+    def error(self, message):
+        """
+        Overridden error handler
+
+        :param message: Error message 
+        """
+        message = "FAIL"
+        raise argparse.ArgumentError(None, message)
+    
+def create_parser() -> argparse.ArgumentParser:
+    """Helper function to contain parser logic"""
+    parser: argparse.ArgumentParser = CustomParser(description='Flight booking application', add_help=False)
+    parser.add_argument('command', metavar='COMMAND', type=str, nargs=3,
+                        help='Command for execution')
+    parser.add_argument('-v', '--verbose', action='store_true', 
+                        help='Enable verbose output (default: False)')
+    
+    return parser
+
+def run(args):
+    """Helper function to run main logic"""
+    command = ' '.join(args.command)
+    m = Main(args)
+    
+    if m.modify_booking(command):
+        print('SUCCESS')
+        # Only save if data was modified
+        m.save_data()
+    else:
+        print('FAIL')
+
 if __name__ == "__main__":
-    m = Main()
-
-    # Given TC
-    print(f'BOOK A0 1: {m.modify_booking("BOOK A0 1")}')
-    print(f'CANCEL A0 1: {m.modify_booking("CANCEL A0 1")}')
-    print(f'BOOK A0 1: {m.modify_booking("BOOK A0 1")}')
-    print(f'BOOK A0 1: {m.modify_booking("BOOK A0 1")}')
-    print(f'BOOK A1 1: {m.modify_booking("BOOK A1 1")}')
-    print(f'BOOK A2 4: {m.modify_booking("BOOK A2 4")}')
-    print(f'BOOK A5 1: {m.modify_booking("BOOK A5 1")}')
-    print(f'BOOK A6 3: {m.modify_booking("BOOK A6 3")}')
-    print(f'BOOK A6 4: {m.modify_booking("BOOK A6 4")}')
-    print(f'BOOK A8 1: {m.modify_booking("BOOK A8 1")}')
-    print(f'BOOK U1 1: {m.modify_booking("BOOK U1 1")}')
-
-    # Additional TC
-    print(f'BOOK A0 7: {m.modify_booking("BOOK A0 7")}')
-    print(f'BOOK A0 7: {m.modify_booking("BOOK A0 7")}')
-    print(f'BOOK A0 0: {m.modify_booking("BOOK A0 0")}')
-    print(f'BOOK A0 10: {m.modify_booking("BOOK A0 10")}')
-    print(f'CANCEL A0 7: {m.modify_booking("CANCEL A0 7")}')
-    print(f'CANCEL A0 7: {m.modify_booking("CANCEL A0 7")}')
-
-    # m.save_data()
+    try:
+        parser = create_parser()
+        args = parser.parse_args()
+        run(args)
+    except:
+        print("FAIL")
+    
+    sys.exit(0)
