@@ -4,6 +4,8 @@ from typing import List, Dict
 
 # "CONSTANTS"
 DB_FILE = "./.data"
+SUCCESS = "SUCCESS"
+FAIL = "FAIL"
 ROW_LETTERS = [
     "A",
     "B",
@@ -40,7 +42,7 @@ class Seat:
         self.number = number
         self.booked = booked
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Seat Number: {self.number} Booked: {self.booked}"
 
     def __repr__(self) -> str:
@@ -60,10 +62,10 @@ class Row:
         self.letter: str = letter
         self.seats: List[Seat] = seats
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Row Letter: {self.letter} Seats: {self.seats}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Row Letter: {self.letter} Seats: {self.seats}"
 
 
@@ -84,7 +86,7 @@ class Main:
         """
         Class constructor
 
-        :param args: Namespace ofCLI arguments
+        :param args: Namespace of CLI arguments
         """
 
         # Regex performs most of the "heavy lifting" for input verification
@@ -100,7 +102,7 @@ class Main:
             rows = self.init_rows()
             self.data = Data(rows)
 
-    def init_rows(self):
+    def init_rows(self) -> List[Row]:
         """
         Initializes data representation of plane rows
 
@@ -120,7 +122,7 @@ class Main:
         with open(DB_FILE, "wb") as f:
             pickle.dump(self.data, f)
 
-    def read_data(self):
+    def read_data(self) -> Data:
         """
         Read data from save file
 
@@ -131,13 +133,13 @@ class Main:
         with open(DB_FILE, "rb") as f:
             return pickle.load(f)
 
-    def modify_booking(self, command):
+    def modify_booking(self, command) -> bool:
         """
         Modify reservation of seats
         :param command: command to action
 
         :return bool: True if completed successfully,
-                      false otherwise
+                      False otherwise
         """
         match = self.expression.match(command)
         if match:
@@ -205,13 +207,13 @@ class CustomParser(argparse.ArgumentParser):
 
         :param message: Error message
         """
-        message = "FAIL"
+        message = FAIL
         raise argparse.ArgumentError(None, message)
 
 
-def create_parser() -> argparse.ArgumentParser:
+def create_parser() -> CustomParser:
     """Helper function to contain parser logic"""
-    parser: argparse.ArgumentParser = CustomParser(
+    parser: CustomParser = CustomParser(
         description="Flight booking application", add_help=False
     )
     parser.add_argument(
@@ -233,11 +235,11 @@ def run(args):
     m = Main(args)
 
     if m.modify_booking(command):
-        print("SUCCESS")
+        print(SUCCESS)
         # Only save if data was modified
         m.save_data()
     else:
-        print("FAIL")
+        print(FAIL)
 
 
 if __name__ == "__main__":
@@ -246,6 +248,6 @@ if __name__ == "__main__":
         args = parser.parse_args()
         run(args)
     except:
-        print("FAIL")
+        print(FAIL)
 
     sys.exit(0)
