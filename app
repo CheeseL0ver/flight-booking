@@ -153,8 +153,9 @@ class Main:
             if stop > len(self.data.rows[row].seats):
                 return False
 
+            # Protect against unintended data modification
+            seats = self.data.rows[row].seats.copy()
             if operation == "BOOK":
-                seats = self.data.rows[row].seats.copy()
                 for index in range(start, stop):
                     if seats[index].booked:
                         if self.verbose:
@@ -167,12 +168,7 @@ class Main:
                             )
                         seats[index].booked = True
 
-                # Update the row contents
-                self.data.rows[row].seats = seats
-                return True
-
             if operation == "CANCEL":
-                seats = self.data.rows[row].seats.copy()
                 for index in range(start, stop):
                     if not seats[index].booked:
                         if self.verbose:
@@ -187,11 +183,11 @@ class Main:
                             )
                         seats[index].booked = False
 
-                # Update the row contents
-                self.data.rows[row].seats = seats
-                if self.verbose:
-                    print("Updated instance booking data")
-                return True
+            # Update the row contents post operation
+            self.data.rows[row].seats = seats
+            if self.verbose:
+                print("Updated instance booking data")
+            return True
 
         else:
             # Input was invalid
